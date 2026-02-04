@@ -1,12 +1,14 @@
-import React, { useState } from "react"; // Tambahkan useState
-import { QRCodeSVG } from "qrcode.react"; // Tambahkan ini
+import React, { useState } from "react";
+// Pastikan kamu sudah menjalankan: npm install qrcode.react
+import { QRCodeCanvas } from "qrcode.react";
 
-function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
-  // State untuk mengontrol tampilan QR Code
-  const [showQR, setShowQR] = useState(false);
+function CartSidebar({ isOpen, closeCart, cartItems = [], updateQty }) {
+  // State untuk alur: cart -> qr -> struk
+  const [view, setView] = useState("cart");
 
+  // Hitung Total Harga dengan pengaman (?? 0)
   const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * item.qty,
+    (total, item) => total + (item.price || 0) * (item.qty || 0),
     0,
   );
 
@@ -18,140 +20,208 @@ function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
     }).format(num);
   };
 
-  // Fungsi untuk reset state saat sidebar ditutup
-  const handleClose = () => {
-    setShowQR(false);
+  // Fungsi tutup yang mereset tampilan kembali ke keranjang
+  const handleCloseSidebar = () => {
+    setView("cart");
     closeCart();
   };
 
   return (
     <>
-      {/* Overlay Gelap */}
+      {/* Overlay */}
       <div
         className={`cart-overlay ${isOpen ? "open" : ""}`}
-        onClick={handleClose}
+        onClick={handleCloseSidebar}
       ></div>
 
-      {/* Sidebar Putih */}
+      {/* Sidebar */}
       <div className={`cart-sidebar ${isOpen ? "open" : ""}`}>
         <div className="cart-header">
-          <h2>Keranjang Belanja</h2>
-          <button className="close-btn" onClick={handleClose}>
+          <h2>
+            {view === "cart" && "Keranjang"}
+            {view === "qr" && "Pembayaran"}
+            {view === "struk" && "Struk Digital"}
+          </h2>
+          <button className="close-btn" onClick={handleCloseSidebar}>
             &times;
           </button>
         </div>
 
-        <div className="cart-items">
-          {/* ... bagian list item tetap sama seperti kode Anda ... */}
-          {cartItems.length === 0 ? (
-            <p
-              style={{ textAlign: "center", marginTop: "50px", color: "#999" }}
-            >
-              Keranjang masih kosong 😢
-            </p>
-          ) : (
-            cartItems.map((item) => (
-              <div key={item.id} className="cart-item">
-                <img src={item.image} alt={item.name} className="cart-img" />
-                <div className="item-info">
-                  <h4>{item.name}</h4>
-                  <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                    {formatRupiah(item.price)}
-                  </div>
-                </div>
-                <div className="qty-control">
-                  <button
-                    className="qty-btn"
-                    onClick={() => updateQty(item.id, -1)}
-                  >
-                    -
-                  </button>
-                  <span style={{ fontSize: "0.9rem" }}>{item.qty}</span>
-                  <button
-                    className="qty-btn"
-                    onClick={() => updateQty(item.id, 1)}
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  onClick={() => removeItem(item.id)}
+        <div
+          className="cart-content"
+          style={{
+            padding: "15px",
+            overflowY: "auto",
+            height: "calc(100% - 150px)",
+          }}
+        >
+          {/* TAMPILAN 1: DAFTAR BELANJA */}
+          {view === "cart" &&
+            (cartItems.length === 0 ? (
+              <p style={{ textAlign: "center", marginTop: "50px" }}>
+                Keranjang kosong 😢
+              </p>
+            ) : (
+              cartItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="cart-item"
                   style={{
-                    border: "none",
-                    background: "transparent",
-                    color: "red",
-                    cursor: "pointer",
-                    marginLeft: "10px",
+                    display: "flex",
+                    marginBottom: "15px",
+                    borderBottom: "1px solid #eee",
+                    paddingBottom: "10px",
                   }}
                 >
-                  🗑️
-                </button>
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    style={{
+                      width: "50px",
+                      height: "50px",
+                      borderRadius: "5px",
+                      marginRight: "10px",
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: "0.9rem" }}>
+                      {item.name}
+                    </h4>
+                    <small>{formatRupiah(item.price)}</small>
+                  </div>
+                  <div className="qty-control">
+                    <button onClick={() => updateQty(item.id, -1)}>-</button>
+                    <span>{item.qty}</span>
+                    <button onClick={() => updateQty(item.id, 1)}>+</button>
+                  </div>
+                </div>
+              ))
+            ))}
+
+          {/* TAMPILAN 2: QR CODE */}
+          {view === "qr" && (
+            <div style={{ textAlign: "center", marginTop: "20px" }}>
+              <p>Scan QRIS SMK Store:</p>
+              <div
+                style={{
+                  background: "white",
+                  padding: "15px",
+                  display: "inline-block",
+                  borderRadius: "10px",
+                  border: "1px solid #ddd",
+                }}
+              >
+                <QRCodeCanvas
+                  value={`PAYMENT-SMK-STORE-${totalPrice}`}
+                  size={180}
+                  includeMargin={true}
+                />
               </div>
-            ))
+              <h3 style={{ marginTop: "15px", color: "#27ae60" }}>
+                {formatRupiah(totalPrice)}
+              </h3>
+              <button
+                className="checkout-btn"
+                style={{ marginTop: "20px", background: "#27ae60" }}
+                onClick={() => setView("struk")}
+              >
+                Konfirmasi Sudah Bayar
+              </button>
+            </div>
+          )}
+
+          {/* TAMPILAN 3: STRUK */}
+          {view === "struk" && (
+            <div
+              style={{
+                background: "#fffef0",
+                padding: "15px",
+                border: "1px dashed #000",
+                fontFamily: "monospace",
+              }}
+            >
+              <center>
+                <strong>SMK STORE PROJECT</strong>
+                <br />
+                <small>Bukti Pembayaran Lunas</small>
+                <p>=========================</p>
+              </center>
+              {cartItems.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  <span>
+                    {item.name} (x{item.qty})
+                  </span>
+                  <span>{formatRupiah(item.price * item.qty)}</span>
+                </div>
+              ))}
+              <p>=========================</p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: "bold",
+                }}
+              >
+                <span>TOTAL</span>
+                <span>{formatRupiah(totalPrice)}</span>
+              </div>
+              <center style={{ marginTop: "20px" }}>
+                <small>Terima kasih sudah berbelanja!</small>
+                <button
+                  onClick={handleCloseSidebar}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    marginTop: "15px",
+                    padding: "5px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Selesai
+                </button>
+              </center>
+            </div>
           )}
         </div>
 
-        {/* FOOTER: Bagian yang kita modifikasi */}
-        {cartItems.length > 0 && (
-          <div className="cart-footer">
-            {!showQR ? (
-              <>
-                <div className="total-row">
-                  <span>Total:</span>
-                  <span>{formatRupiah(totalPrice)}</span>
-                </div>
-                <button
-                  className="checkout-btn"
-                  onClick={() => setShowQR(true)} // Ubah ini
-                >
-                  Bayar Sekarang (QRIS)
-                </button>
-              </>
-            ) : (
-              <div style={{ textAlign: "center", padding: "10px" }}>
-                <p style={{ fontWeight: "bold", marginBottom: "10px" }}>
-                  Scan QRIS untuk Membayar
-                </p>
-
-                {/* QR Code dinamis berdasarkan total belanja */}
-                <div
-                  style={{
-                    background: "white",
-                    padding: "10px",
-                    display: "inline-block",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <QRCodeSVG
-                    value={`https://smk-store.vercel.app/pay?total=${totalPrice}`}
-                    size={150}
-                  />
-                </div>
-
-                <p
-                  style={{
-                    marginTop: "10px",
-                    color: "#27ae60",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {formatRupiah(totalPrice)}
-                </p>
-                <button
-                  onClick={() => setShowQR(false)}
-                  style={{
-                    fontSize: "0.8rem",
-                    background: "none",
-                    border: "1px solid #ccc",
-                    cursor: "pointer",
-                    padding: "5px 10px",
-                    borderRadius: "5px",
-                  }}
-                >
-                  Kembali ke Keranjang
-                </button>
-              </div>
-            )}
+        {/* FOOTER: Hanya muncul jika di tampilan keranjang & ada isi */}
+        {view === "cart" && cartItems.length > 0 && (
+          <div
+            className="cart-footer"
+            style={{
+              position: "absolute",
+              bottom: 0,
+              width: "100%",
+              padding: "15px",
+              background: "#fff",
+              borderTop: "1px solid #eee",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "10px",
+                fontWeight: "bold",
+              }}
+            >
+              <span>Total:</span>
+              <span>{formatRupiah(totalPrice)}</span>
+            </div>
+            <button
+              className="checkout-btn"
+              style={{ width: "100%" }}
+              onClick={() => setView("qr")}
+            >
+              Bayar Sekarang
+            </button>
           </div>
         )}
       </div>

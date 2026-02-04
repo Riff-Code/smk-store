@@ -313,4 +313,9 @@ body {
     ); /* 1 kolom penuh di HP */
     gap: 1.5rem;
   }
+
+  .receipt {
+    font-family: "Courier New", Courier, monospace;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
 }

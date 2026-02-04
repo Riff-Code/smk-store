@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react"; // Tambahkan useState
+import { QRCodeSVG } from "qrcode.react"; // Tambahkan ini
 
 function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
-  // Hitung Total Harga
+  // State untuk mengontrol tampilan QR Code
+  const [showQR, setShowQR] = useState(false);
+
   const totalPrice = cartItems.reduce(
     (total, item) => total + item.price * item.qty,
     0,
@@ -15,24 +18,31 @@ function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
     }).format(num);
   };
 
+  // Fungsi untuk reset state saat sidebar ditutup
+  const handleClose = () => {
+    setShowQR(false);
+    closeCart();
+  };
+
   return (
     <>
       {/* Overlay Gelap */}
       <div
         className={`cart-overlay ${isOpen ? "open" : ""}`}
-        onClick={closeCart}
+        onClick={handleClose}
       ></div>
 
       {/* Sidebar Putih */}
       <div className={`cart-sidebar ${isOpen ? "open" : ""}`}>
         <div className="cart-header">
           <h2>Keranjang Belanja</h2>
-          <button className="close-btn" onClick={closeCart}>
+          <button className="close-btn" onClick={handleClose}>
             &times;
           </button>
         </div>
 
         <div className="cart-items">
+          {/* ... bagian list item tetap sama seperti kode Anda ... */}
           {cartItems.length === 0 ? (
             <p
               style={{ textAlign: "center", marginTop: "50px", color: "#999" }}
@@ -49,8 +59,6 @@ function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
                     {formatRupiah(item.price)}
                   </div>
                 </div>
-
-                {/* Kontrol Jumlah Barang */}
                 <div className="qty-control">
                   <button
                     className="qty-btn"
@@ -66,8 +74,6 @@ function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
                     +
                   </button>
                 </div>
-
-                {/* Tombol Hapus */}
                 <button
                   onClick={() => removeItem(item.id)}
                   style={{
@@ -85,23 +91,67 @@ function CartSidebar({ isOpen, closeCart, cartItems, updateQty, removeItem }) {
           )}
         </div>
 
-        {/* Footer Sidebar (Total & Checkout) */}
+        {/* FOOTER: Bagian yang kita modifikasi */}
         {cartItems.length > 0 && (
           <div className="cart-footer">
-            <div className="total-row">
-              <span>Total:</span>
-              <span>{formatRupiah(totalPrice)}</span>
-            </div>
-            <button
-              className="checkout-btn"
-              onClick={() =>
-                alert(
-                  "Terima kasih sudah berbelanja! Fitur Payment belum tersedia.",
-                )
-              }
-            >
-              Checkout Sekarang
-            </button>
+            {!showQR ? (
+              <>
+                <div className="total-row">
+                  <span>Total:</span>
+                  <span>{formatRupiah(totalPrice)}</span>
+                </div>
+                <button
+                  className="checkout-btn"
+                  onClick={() => setShowQR(true)} // Ubah ini
+                >
+                  Bayar Sekarang (QRIS)
+                </button>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "10px" }}>
+                <p style={{ fontWeight: "bold", marginBottom: "10px" }}>
+                  Scan QRIS untuk Membayar
+                </p>
+
+                {/* QR Code dinamis berdasarkan total belanja */}
+                <div
+                  style={{
+                    background: "white",
+                    padding: "10px",
+                    display: "inline-block",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <QRCodeSVG
+                    value={`https://smk-store.vercel.app/pay?total=${totalPrice}`}
+                    size={150}
+                  />
+                </div>
+
+                <p
+                  style={{
+                    marginTop: "10px",
+                    color: "#27ae60",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {formatRupiah(totalPrice)}
+                </p>
+                <button
+                  onClick={() => setShowQR(false)}
+                  style={{
+                    fontSize: "0.8rem",
+                    background: "none",
+                    border: "1px solid #ccc",
+                    cursor: "pointer",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                  }}
+                >
+                  Kembali ke Keranjang
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
